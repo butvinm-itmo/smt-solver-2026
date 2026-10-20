@@ -1,5 +1,6 @@
 from z3 import *
-from common import EqTheorySolver, check_formulas, linearize, Solver_test_files
+
+from common import EqTheorySolver, Solver_test_files, check_formulas, linearize
 
 
 class CongruenceSolver(EqTheorySolver):
@@ -13,6 +14,7 @@ class CongruenceSolver(EqTheorySolver):
     - `t.decl()` — функциональный символ терма, `t.decl().get_id()` — его уникальный номер
     - `t.get_id()` — уникальный номер терма
     """
+
     def __init__(self):
         self.terms = {}  # номер терма -> терм; все подтермы добавленных литералов
         self.parent = {}  # union-find: номер терма -> номер родителя
@@ -53,9 +55,9 @@ class CongruenceSolver(EqTheorySolver):
 
 
 def CongruenceSolver_test1():
-    S = DeclareSort('S')
-    f = Function('f', S, S)
-    x = Const('x', S)
+    S = DeclareSort("S")
+    f = Function("f", S, S)
+    x = Const("x", S)
     solver = CongruenceSolver()
     solver.add(f(f(x)) == x, f(f(f(x))) == x)
     assert solver.check() == sat
@@ -64,32 +66,38 @@ def CongruenceSolver_test1():
 
 
 def CongruenceSolver_test2():
-    S = DeclareSort('S')
-    a, b, c, d, e, s, t = Consts('a b c d e s t', S)
-    f = Function('f', S, S, S)
-    g = Function('g', S, S)
-    check_formulas(CongruenceSolver, [a == b, b == c, d == e, b == s, d == t, f(a, g(d)) != f(g(e), b)], sat)
+    S = DeclareSort("S")
+    a, b, c, d, e, s, t = Consts("a b c d e s t", S)
+    f = Function("f", S, S, S)
+    g = Function("g", S, S)
+    check_formulas(
+        CongruenceSolver,
+        [a == b, b == c, d == e, b == s, d == t, f(a, g(d)) != f(g(e), b)],
+        sat,
+    )
 
 
 def CongruenceSolver_test_lecture():
-    S = DeclareSort('S')
-    a, b, c, x = Consts('a b c x', S)
-    f = Function('f', S, S)
-    g = Function('g', S, S)
-    h = Function('h', S, S, S)
+    S = DeclareSort("S")
+    a, b, c, x = Consts("a b c x", S)
+    f = Function("f", S, S)
+    g = Function("g", S, S)
+    h = Function("h", S, S, S)
     check_formulas(CongruenceSolver, [a == b, b == c, f(a) != f(c)], unsat)
     check_formulas(CongruenceSolver, [a == b, f(f(a)) != f(f(c))], sat)
     check_formulas(CongruenceSolver, [h(a, b) == a, h(h(a, b), b) != a], unsat)
     check_formulas(CongruenceSolver, [f(a) == f(b), a != b], sat)
-    check_formulas(CongruenceSolver, [g(g(g(x))) == x, g(g(g(g(g(x))))) == x, g(x) != x], unsat)
+    check_formulas(
+        CongruenceSolver, [g(g(g(x))) == x, g(g(g(g(g(x))))) == x, g(x) != x], unsat
+    )
 
 
 def CongruenceSolver_test_sat():
-    S = DeclareSort('S')
-    a, b, c = Consts('a b c', S)
-    f = Function('f', S, S)
-    g = Function('g', S, S)
-    h = Function('h', S, S, S)
+    S = DeclareSort("S")
+    a, b, c = Consts("a b c", S)
+    f = Function("f", S, S)
+    g = Function("g", S, S)
+    h = Function("h", S, S, S)
     check_formulas(CongruenceSolver, [a == c, f(a) != f(b)], sat)
     check_formulas(CongruenceSolver, [f(a) != g(a)], sat)
     check_formulas(CongruenceSolver, [h(a, b) != h(b, a)], sat)
