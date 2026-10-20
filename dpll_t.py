@@ -32,9 +32,9 @@ class DPLL_T_Solver:
     Абстракция T2B и обратное отображение B2T уже написаны.
     """
 
-    def __init__(self, prop_solver: Solver, theory_solver: Callable[[], "TheorySolver"]) -> None:
+    def __init__(self, prop_solver: Solver, make_theory_solver: Callable[[], "TheorySolver"]) -> None:
         self.prop_solver = prop_solver
-        self.theory_solver = theory_solver
+        self.make_theory_solver = make_theory_solver
         self.atoms: dict[int, tuple[ExprRef, BoolRef]] = {}  # номер атома теории -> (атом, булева переменная)
 
     def T2B(self, f: ExprRef) -> ExprRef:
@@ -59,7 +59,20 @@ class DPLL_T_Solver:
             self.prop_solver.add(self.T2B(f))
 
     def check(self) -> CheckSatResult:
-        raise NotImplementedError()
+        while self.prop_solver.check() == sat:
+            m: ModelRef = self.prop_solver.model()
+
+            theory_solver = self.make_theory_solver()
+            theory_solver.add(*self.B2T(m))
+
+            if theory_solver.check() == sat:
+                return sat
+
+            core = theory_solver.unsat_core()
+            c = Or([Not(l) for l in core])
+            self.prop_solver.add(self.T2B(c))
+
+        return unsat
 
 
 class TheorySolver:
