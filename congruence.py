@@ -15,13 +15,13 @@ class CongruenceSolver(EqTheorySolver):
     - `t.get_id()` — уникальный номер терма
     """
 
-    def __init__(self):
-        self.terms = {}  # номер терма -> терм; все подтермы добавленных литералов
-        self.parent = {}  # union-find: номер терма -> номер родителя
-        self.equalities = []  # пары термов (s, t) для литералов s = t
-        self.disequalities = []  # пары термов (s, t) для литералов s != t
+    def __init__(self) -> None:
+        self.terms: dict[int, ExprRef] = {}  # номер терма -> терм; все подтермы добавленных литералов
+        self.parent: dict[int, int] = {}  # union-find: номер терма -> номер родителя
+        self.equalities: list[tuple[ExprRef, ExprRef]] = []  # пары термов (s, t) для литералов s = t
+        self.disequalities: list[tuple[ExprRef, ExprRef]] = []  # пары термов (s, t) для литералов s != t
 
-    def register(self, t):
+    def register(self, t: ExprRef) -> None:
         """Добавляет терм `t` и все его подтермы в `self.terms`"""
         if t.get_id() not in self.terms:
             self.terms[t.get_id()] = t
@@ -29,32 +29,64 @@ class CongruenceSolver(EqTheorySolver):
             for c in t.children():
                 self.register(c)
 
-    def find(self, t):
+    def find(self, t: ExprRef) -> int:
         """Номер представителя класса эквивалентности терма `t`"""
         i = t.get_id()
         while self.parent[i] != i:
             i = self.parent[i]
+
         return i
 
-    def union(self, s, t):
+    def union(self, s: ExprRef, t: ExprRef) -> None:
         """Сливает классы эквивалентности термов `s` и `t`"""
         self.parent[self.find(s)] = self.find(t)
 
-    def add_equal(self, a, b):
+    def add_equal(self, a: ExprRef, b: ExprRef) -> None:
         self.register(a)
         self.register(b)
         self.equalities.append((a, b))
 
-    def add_distinct(self, a, b):
+    def add_distinct(self, a: ExprRef, b: ExprRef) -> None:
         self.register(a)
         self.register(b)
         self.disequalities.append((a, b))
 
-    def check(self):
-        raise NotImplementedError()
+    def merge(self) -> None:
+        merged = True
+        while merged:
+            merged = False
+            for i, f in self.terms.items():
+                if not f.children():
+                    continue
+
+                for j, g in self.terms.items():
+                    if i == j or not g.children() or self.find(f) == self.find(g):
+                        continue
+
+                    if f.decl() != g.decl() or len(f.children()) != len(g.children()):
+                        continue
+
+                    if all(self.find(s) == self.find(t) for s, t in zip(f.children(), g.children())):
+                        self.union(f, g)
+                        merged = True
+
+    def check(self) -> CheckSatResult:
+        for i in self.terms:
+            self.parent[i] = i
+
+        for s, t in self.equalities:
+            self.union(s, t)
+
+        self.merge()
+
+        for s, t in self.disequalities:
+            if self.find(s) == self.find(t):
+                return unsat
+
+        return sat
 
 
-def CongruenceSolver_test1():
+def CongruenceSolver_test1() -> None:
     S = DeclareSort("S")
     f = Function("f", S, S)
     x = Const("x", S)
@@ -65,7 +97,7 @@ def CongruenceSolver_test1():
     assert solver.check() == unsat
 
 
-def CongruenceSolver_test2():
+def CongruenceSolver_test2() -> None:
     S = DeclareSort("S")
     a, b, c, d, e, s, t = Consts("a b c d e s t", S)
     f = Function("f", S, S, S)
@@ -77,7 +109,7 @@ def CongruenceSolver_test2():
     )
 
 
-def CongruenceSolver_test_lecture():
+def CongruenceSolver_test_lecture() -> None:
     S = DeclareSort("S")
     a, b, c, x = Consts("a b c x", S)
     f = Function("f", S, S)
@@ -87,12 +119,10 @@ def CongruenceSolver_test_lecture():
     check_formulas(CongruenceSolver, [a == b, f(f(a)) != f(f(c))], sat)
     check_formulas(CongruenceSolver, [h(a, b) == a, h(h(a, b), b) != a], unsat)
     check_formulas(CongruenceSolver, [f(a) == f(b), a != b], sat)
-    check_formulas(
-        CongruenceSolver, [g(g(g(x))) == x, g(g(g(g(g(x))))) == x, g(x) != x], unsat
-    )
+    check_formulas(CongruenceSolver, [g(g(g(x))) == x, g(g(g(g(g(x))))) == x, g(x) != x], unsat)
 
 
-def CongruenceSolver_test_sat():
+def CongruenceSolver_test_sat() -> None:
     S = DeclareSort("S")
     a, b, c = Consts("a b c", S)
     f = Function("f", S, S)
@@ -104,7 +134,7 @@ def CongruenceSolver_test_sat():
     check_formulas(CongruenceSolver, [a == b, h(a, c) != h(b, a)], sat)
 
 
-def CongruenceSolver_tests():
+def CongruenceSolver_tests() -> None:
     CongruenceSolver_test1()
     CongruenceSolver_test2()
     CongruenceSolver_test_lecture()
