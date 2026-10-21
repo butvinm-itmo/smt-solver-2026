@@ -5,6 +5,22 @@ from z3 import *
 from common import Solver_test_files, check_formulas
 
 
+def to_read(A: ExprRef, j: ExprRef) -> ExprRef:
+    if is_store(A):
+        B, i, v = A.arg(0), A.arg(1), A.arg(2)
+        return If(i == j, v, to_read(B, j))
+
+    f_A = Function(f"f_{A}", A.domain(), A.range())
+    return f_A(j)
+
+
+def f_to_euf(f: ExprRef) -> ExprRef:
+    if is_select(f):
+        return to_read(f.arg(0), f.arg(1))
+
+    return f
+
+
 def array_to_euf(formulas: list[ExprRef]) -> Iterable[ExprRef]:
     """
     Реализуйте: по списку формул над EUF и массивами без равенств массивов верните эквивыполнимый
@@ -13,7 +29,8 @@ def array_to_euf(formulas: list[ExprRef]) -> Iterable[ExprRef]:
     Полезное из API z3: `is_select(t)`, `is_store(t)`, `t.arg(i)`, `Select(A, y)`, `If(c, a, b)`,
     `Function(name, *sorts)`, `A.domain()`, `A.range()`
     """
-    raise NotImplementedError()
+    for f in formulas:
+        yield rewrite(f, f_to_euf)
 
 
 def rewrite(e: ExprRef, f: Callable[[ExprRef], ExprRef]) -> ExprRef:
